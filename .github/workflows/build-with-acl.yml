@@ -85,8 +85,6 @@ jobs:
           scons \
             os=android \
             arch=arm64-v8a \
-            android_ndk_root=$ANDROID_NDK \
-            android_api_level=${{ env.ANDROID_API_LEVEL }} \
             neon=1 \
             opencl=0 \
             build=cross_compile \
