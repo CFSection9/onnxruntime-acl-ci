@@ -73,8 +73,11 @@ jobs:
           NDK_BIN="${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin"
           export PATH="${NDK_BIN}:$PATH"
           
-          # Create symlinks for scons to find generic compiler names
+          # Create symlinks for scons to find generic cross-compiler tool names
           cd "${NDK_BIN}"
+          for tool in ar as ld ranlib strip; do
+            ln -sf aarch64-linux-android-${tool} ${tool} || true
+          done
           ln -sf aarch64-linux-android${{ env.ANDROID_API_LEVEL }}-clang aarch64-linux-android-clang || true
           ln -sf aarch64-linux-android${{ env.ANDROID_API_LEVEL }}-clang++ aarch64-linux-android-clang++ || true
           
