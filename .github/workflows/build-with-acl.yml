@@ -1,0 +1,208 @@
+name: Build ONNX Runtime with ACL for Android
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+env:
+  ANDROID_API_LEVEL: 24
+  ANDROID_NDK_VERSION: r26b
+  ANDROID_BUILD_TOOLS_VERSION: 34.0.0
+  ANDROID_ABI: arm64-v8a
+
+jobs:
+  build-acl:
+    name: Build ARM Compute Library (ACL)
+    runs-on: ubuntu-latest
+    outputs:
+      acl-version: ${{ steps.get-acl-version.outputs.version }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get latest ACL version
+        id: get-acl-version
+        run: |
+          ACL_VERSION=$(git ls-remote --tags --sort=-version:refname https://github.com/ARM-software/ComputeLibrary.git | grep -oP 'v\d+\.\d+\.\d+' | head -1)
+          echo "version=${ACL_VERSION}" >> $GITHUB_OUTPUT
+          echo "Building ACL version: ${ACL_VERSION}"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: ${{ env.ANDROID_API_LEVEL }}
+          ndk-version: ${{ env.ANDROID_NDK_VERSION }}
+          build-tools-version: ${{ env.ANDROID_BUILD_TOOLS_VERSION }}
+
+      - name: Cache ACL Build
+        id: cache-acl
+        uses: actions/cache@v3
+        with:
+          path: |
+            acl-build
+            acl-repo
+          key: acl-android-${{ env.ANDROID_ABI }}-${{ steps.get-acl-version.outputs.version }}-${{ env.ANDROID_NDK_VERSION }}
+
+      - name: Clone ARM Compute Library
+        if: steps.cache-acl.outputs.cache-hit != 'true'
+        run: |
+          ACL_VERSION=${{ steps.get-acl-version.outputs.version }}
+          git clone --depth 1 --branch ${ACL_VERSION} https://github.com/ARM-software/ComputeLibrary.git acl-repo
+
+      - name: Install ACL Build Dependencies
+        if: steps.cache-acl.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y scons python3
+
+      - name: Build ACL for Android
+        if: steps.cache-acl.outputs.cache-hit != 'true'
+        run: |
+          cd acl-repo
+          mkdir -p ../acl-build
+          
+          # Build ACL for arm64-v8a
+          scons \
+            os=android \
+            arch=arm64-v8a \
+            android_ndk_root=$ANDROID_NDK \
+            android_api_level=${{ env.ANDROID_API_LEVEL }} \
+            neon=1 \
+            opencl=0 \
+            build=release \
+            build_dir=../acl-build \
+            -j$(nproc)
+
+      - name: Upload ACL Build Cache
+        uses: actions/upload-artifact@v3
+        with:
+          name: acl-build-${{ env.ANDROID_ABI }}
+          path: acl-build/
+          retention-days: 7
+
+  build-onnx-runtime:
+    name: Build ONNX Runtime with ACL
+    runs-on: ubuntu-latest
+    needs: build-acl
+    
+    steps:
+      - name: Checkout ONNX Runtime
+        uses: actions/checkout@v4
+        with:
+          repository: microsoft/onnxruntime
+          fetch-depth: 0
+
+      - name: Get latest ONNX Runtime version
+        id: get-ort-version
+        run: |
+          ORT_VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
+          echo "version=${ORT_VERSION}" >> $GITHUB_OUTPUT
+          echo "Building ONNX Runtime version: ${ORT_VERSION}"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: ${{ env.ANDROID_API_LEVEL }}
+          ndk-version: ${{ env.ANDROID_NDK_VERSION }}
+          build-tools-version: ${{ env.ANDROID_BUILD_TOOLS_VERSION }}
+
+      - name: Download ACL Build
+        uses: actions/download-artifact@v3
+        with:
+          name: acl-build-${{ env.ANDROID_ABI }}
+          path: acl-build/
+
+      - name: Build ONNX Runtime with ACL
+        run: |
+          cd $GITHUB_WORKSPACE
+          
+          # Build ONNX Runtime for Android with ACL
+          python3 tools/ci_build/build.py \
+            --android \
+            --android_sdk_path $ANDROID_SDK_ROOT \
+            --android_ndk_path $ANDROID_NDK \
+            --android_abi ${{ env.ANDROID_ABI }} \
+            --android_api_level ${{ env.ANDROID_API_LEVEL }} \
+            --android_toolchain $ANDROID_NDK/build/cmake/android.cmake \
+            --use_acl \
+            --acl_home ${{ github.workspace }}/acl-build \
+            --build_shared_lib \
+            --cmake_extra_defines "onnxruntime_PREFER_SYSTEM_LIB=OFF" \
+            --config Release \
+            --update \
+            --build
+
+      - name: Collect .so files
+        run: |
+          mkdir -p artifacts
+          find . -name "libonnxruntime.so" -type f -exec cp {} artifacts/ \;
+          find . -name "libonnxruntime_c.so" -type f -exec cp {} artifacts/ \;
+          find . -name "libonnxruntime_providers_acl.so" -type f -exec cp {} artifacts/ \;
+          ls -lah artifacts/
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: onnxruntime-acl-android-${{ env.ANDROID_ABI }}
+          path: artifacts/
+          retention-days: 30
+
+      - name: Create Release (on tag)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/*.so
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+          body: |
+            ONNX Runtime built with ARM Compute Library (ACL) support for Android
+            
+            - ONNX Runtime: ${{ steps.get-ort-version.outputs.version }}
+            - ACL Version: ${{ needs.build-acl.outputs.acl-version }}
+            - Android API: ${{ env.ANDROID_API_LEVEL }}+
+            - ABI: ${{ env.ANDROID_ABI }}
+            
+            `.so` files are included as release assets.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  verify-build:
+    name: Verify Build Outputs
+    runs-on: ubuntu-latest
+    needs: build-onnx-runtime
+    if: always()
+    
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: onnxruntime-acl-android-${{ env.ANDROID_ABI }}
+
+      - name: Verify .so files
+        run: |
+          echo "=== Downloaded .so files ==="
+          ls -lah *.so
+          echo ""
+          echo "=== File Information ==="
+          file *.so
+          echo ""
+          echo "=== Checking symbols ==="
+          nm *.so | head -20 || echo "nm not available"

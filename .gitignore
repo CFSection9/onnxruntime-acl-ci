@@ -1,0 +1,41 @@
+# .gitignore for ONNX Runtime ACL Build
+
+# Build outputs
+artifacts/
+build/
+cmake-build-*/
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+
+# Cloned repositories
+onnxruntime/
+acl-repo/
+acl-build/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+
+# Scons
+.scons*
+*.pyc
