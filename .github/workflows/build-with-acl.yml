@@ -71,6 +71,8 @@ jobs:
         if: steps.cache-acl.outputs.cache-hit != 'true'
         run: |
           export PATH=${{ env.ANDROID_NDK }}/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+          export CC=${{ env.ANDROID_NDK }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang
+          export CXX=${{ env.ANDROID_NDK }}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android21-clang++
           cd acl-repo
           mkdir -p ../acl-build
           
