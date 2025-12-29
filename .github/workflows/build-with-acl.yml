@@ -81,7 +81,7 @@ jobs:
             android_api_level=${{ env.ANDROID_API_LEVEL }} \
             neon=1 \
             opencl=0 \
-            build=release \
+            build=cross_compile \
             build_dir=../acl-build \
             -j$(nproc)
 
