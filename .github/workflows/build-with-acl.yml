@@ -86,7 +86,7 @@ jobs:
             -j$(nproc)
 
       - name: Upload ACL Build Cache
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: acl-build-${{ env.ANDROID_ABI }}
           path: acl-build/
@@ -125,7 +125,7 @@ jobs:
           build-tools-version: ${{ env.ANDROID_BUILD_TOOLS_VERSION }}
 
       - name: Download ACL Build
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: acl-build-${{ env.ANDROID_ABI }}
           path: acl-build/
@@ -159,7 +159,7 @@ jobs:
           ls -lah artifacts/
 
       - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: onnxruntime-acl-android-${{ env.ANDROID_ABI }}
           path: artifacts/
