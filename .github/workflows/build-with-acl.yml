@@ -79,10 +79,15 @@ jobs:
             embed_kernels=1 \
             os=android \
             arch=arm64-v8a \
-            build_dir=../acl-build \
+            build_dir=build \
             toolchain_prefix=""
           
           echo "ACL build complete"
+          # Copy build output to parent directory for easier artifact collection
+          mkdir -p ../acl-build
+          cp -r build/* ../acl-build/ || true
+          
+          echo "Build artifacts copied to ../acl-build/"
           ls -lah ../acl-build/
 
       - name: Upload ACL Build Cache
