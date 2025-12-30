@@ -87,7 +87,14 @@ jobs:
           mkdir -p ../acl-build
           cp -r build/* ../acl-build/ || true
           
-          echo "Build artifacts copied to ../acl-build/"
+          # Copy header files to acl-build (needed by ONNX Runtime to compile ACL EP)
+          cp -r arm_compute ../acl-build/ || true
+          cp -r include ../acl-build/ || true
+          cp -r src ../acl-build/ || true
+          cp -r support ../acl-build/ || true
+          cp -r utils ../acl-build/ || true
+          
+          echo "Build artifacts and headers copied to ../acl-build/"
           ls -lah ../acl-build/
 
       - name: Upload ACL Build Cache
@@ -151,8 +158,8 @@ jobs:
             --android_ndk_path $ANDROID_NDK \
             --android_abi ${{ env.ANDROID_ABI }} \
             --use_acl \
-            --acl_home $GITHUB_WORKSPACE/../ComputeLibrary \
-            --acl_libs $GITHUB_WORKSPACE/../acl-build \
+            --acl_home $GITHUB_WORKSPACE/acl-build \
+            --acl_libs $GITHUB_WORKSPACE/acl-build \
             --build_shared_lib \
             --config Release \
             --update \
