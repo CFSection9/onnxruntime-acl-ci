@@ -57,6 +57,20 @@ jobs:
           
           echo "ACL binaries extracted to acl-build/"
           ls -lah acl-build/
+          
+          # Clone ACL source for headers (ONNX Runtime needs them to compile ACL EP)
+          echo "Cloning ACL source for header files..."
+          git clone --depth 1 --branch v${ACL_VERSION} https://github.com/ARM-software/ComputeLibrary.git acl-source
+          
+          # Copy header files to acl-build
+          cp -r acl-source/arm_compute acl-build/ || true
+          cp -r acl-source/include acl-build/ || true
+          cp -r acl-source/src acl-build/ || true
+          cp -r acl-source/support acl-build/ || true
+          cp -r acl-source/utils acl-build/ || true
+          
+          echo "ACL headers added to acl-build/"
+          ls -lah acl-build/
 
       - name: Upload ACL Build Cache
         uses: actions/upload-artifact@v4
