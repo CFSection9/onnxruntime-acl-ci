@@ -109,6 +109,7 @@ jobs:
           
           # Build ONNX Runtime for Android with ACL
           python3 tools/ci_build/build.py \
+            --build_dir build \
             --android \
             --android_sdk_path $ANDROID_SDK_ROOT \
             --android_ndk_path $ANDROID_NDK \
