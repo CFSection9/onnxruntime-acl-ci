@@ -49,51 +49,39 @@ jobs:
           echo "Cloning ACL version: v${ACL_VERSION}"
           git clone --depth 1 --branch v${ACL_VERSION} https://github.com/ARM-software/ComputeLibrary.git
 
-      - name: Install SCons
+      - name: Prepare ACL prebuilt for Android
         if: steps.cache-acl.outputs.cache-hit != 'true'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y scons
-
-      - name: Build ACL for Android
-        if: steps.cache-acl.outputs.cache-hit != 'true'
-        run: |
-          echo "Building ACL for Android..."
+          set -e
+          ACL_VERSION=${{ steps.get-acl-version.outputs.version }}
+          echo "Using ACL prebuilt for version: v${ACL_VERSION}"
+          
           cd ComputeLibrary
+          PREBUILT_TAR="arm_compute-v${ACL_VERSION}-android-aarch64-cpu-bin.tar.gz"
+          PREBUILT_URL="https://github.com/ARM-software/ComputeLibrary/releases/download/v${ACL_VERSION}/${PREBUILT_TAR}"
+          echo "Downloading prebuilt ACL from: ${PREBUILT_URL}"
+          curl -L -o ${PREBUILT_TAR} ${PREBUILT_URL}
+          mkdir -p prebuilt
+          tar -xzf ${PREBUILT_TAR} -C prebuilt
           
-          TOOLCHAIN_ROOT="${ANDROID_NDK}/toolchains/llvm/prebuilt/linux-x86_64/bin"
-          CC_COMPILER="${TOOLCHAIN_ROOT}/aarch64-linux-android${{ env.ANDROID_API_LEVEL }}-clang"
-          CXX_COMPILER="${TOOLCHAIN_ROOT}/aarch64-linux-android${{ env.ANDROID_API_LEVEL }}-clang++"
-          
-          CFLAGS="--target=aarch64-linux-android${{ env.ANDROID_API_LEVEL }} -march=armv8-a" \
-          CXXFLAGS="--target=aarch64-linux-android${{ env.ANDROID_API_LEVEL }} -march=armv8-a" \
-          CC="${CC_COMPILER}" \
-          CXX="${CXX_COMPILER}" \
-          scons Werror=0 -j$(nproc) \
-            debug=0 \
-            asserts=0 \
-            neon=1 \
-            opencl=0 \
-            embed_kernels=1 \
-            os=android \
-            arch=arm64-v8a \
-            build_dir=build \
-            toolchain_prefix=""
-          
-          echo "ACL build complete"
-          # Copy full source tree (excluding .git) including build outputs for downstream compilation
+          # Copy full source tree (excluding .git) so ORT can see src/* headers it expects
           mkdir -p ../acl-build/ComputeLibrary
           tar cf - --exclude='.git' . | (cd ../acl-build/ComputeLibrary && tar xf -)
           
-          echo "Build artifacts and headers copied to ../acl-build/ComputeLibrary"
+          # Place prebuilt libs where ORT will link them
+          mkdir -p ../acl-build/ComputeLibrary/build
+          find prebuilt -type f \( -name "libarm_compute*.a" -o -name "libarm_compute*.so" \) -exec cp {} ../acl-build/ComputeLibrary/build/ \;
+          
+          echo "Prebuilt artifacts and headers staged under ../acl-build/ComputeLibrary"
           ls -lah ../acl-build/ComputeLibrary
+          ls -lah ../acl-build/ComputeLibrary/build
           
           echo ""
           echo "=== Looking for libarm_compute library files ==="
           find ../acl-build/ComputeLibrary -name "*libarm_compute*" -type f
           
           echo ""
-          echo "=== All library files in build ==="
+          echo "=== All library files in staged build ==="
           find ../acl-build/ComputeLibrary -type f \( -name "*.a" -o -name "*.so" \) | head -20
 
       - name: Upload ACL Build Cache
