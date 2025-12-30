@@ -62,7 +62,8 @@ jobs:
           echo "Downloading prebuilt ACL from: ${PREBUILT_URL}"
           curl -L -o ${PREBUILT_TAR} ${PREBUILT_URL}
           mkdir -p ../acl-build/ComputeLibrary/build
-          tar -xzf ${PREBUILT_TAR} -C ../acl-build/ComputeLibrary/build
+          # Strip the top-level directory inside the tar so libs land directly in build/
+          tar -xzf ${PREBUILT_TAR} -C ../acl-build/ComputeLibrary/build --strip-components=1
           
           # Copy full source tree (excluding .git) so ORT can see src/* headers it expects
           mkdir -p ../acl-build/ComputeLibrary
