@@ -42,6 +42,33 @@ jobs:
           path: acl-build
           key: acl-android-${{ env.ANDROID_ABI }}-${{ steps.get-acl-version.outputs.version }}
 
+      - name: Verify Cached ACL Build
+        run: |
+          echo "=== Verifying ACL cache ==="
+          
+          if [ ! -d "acl-build" ]; then
+            echo "✗ FAILED: acl-build directory not found!"
+            exit 1
+          fi
+          
+          echo "Checking for required headers in cache..."
+          
+          if [ -d "acl-build/arm_compute" ]; then
+            echo "✓ arm_compute headers present"
+          else
+            echo "✗ FAILED: arm_compute headers NOT found in cache!"
+            exit 1
+          fi
+          
+          if [ -d "acl-build/include" ]; then
+            echo "✓ include directory present"
+          else
+            echo "✗ FAILED: include directory NOT found in cache!"
+            exit 1
+          fi
+          
+          echo "Cache verification passed ✓"
+
       - name: Clone ARM Compute Library
         if: steps.cache-acl.outputs.cache-hit != 'true'
         run: |
