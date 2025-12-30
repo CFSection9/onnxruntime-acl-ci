@@ -81,27 +81,20 @@ jobs:
             toolchain_prefix=""
           
           echo "ACL build complete"
-          # Copy build output to parent directory for easier artifact collection
-          mkdir -p ../acl-build
-          cp -r build/* ../acl-build/ || true
+          # Copy full source tree (excluding .git) including build outputs for downstream compilation
+          mkdir -p ../acl-build/ComputeLibrary
+          tar cf - --exclude='.git' . | (cd ../acl-build/ComputeLibrary && tar xf -)
           
-          # Copy header files to acl-build (needed by ONNX Runtime to compile ACL EP)
-          cp -r arm_compute ../acl-build/ || true
-          cp -r include ../acl-build/ || true
-          cp -r src ../acl-build/ || true
-          cp -r support ../acl-build/ || true
-          cp -r utils ../acl-build/ || true
-          
-          echo "Build artifacts and headers copied to ../acl-build/"
-          ls -lah ../acl-build/
+          echo "Build artifacts and headers copied to ../acl-build/ComputeLibrary"
+          ls -lah ../acl-build/ComputeLibrary
           
           echo ""
           echo "=== Looking for libarm_compute library files ==="
-          find ../acl-build -name "*libarm_compute*" -type f
+          find ../acl-build/ComputeLibrary -name "*libarm_compute*" -type f
           
           echo ""
           echo "=== All library files in build ==="
-          find ../acl-build -type f \( -name "*.a" -o -name "*.so" \) | head -20
+          find ../acl-build/ComputeLibrary -type f \( -name "*.a" -o -name "*.so" \) | head -20
 
       - name: Upload ACL Build Cache
         uses: actions/upload-artifact@v4
@@ -155,7 +148,7 @@ jobs:
       - name: Verify ACL Build Contents
         run: |
           echo "=== Contents of acl-build/ ==="
-          find acl-build -type f -name "*.so" -o -name "*.a" | head -20
+          find acl-build -type f \( -name "*.so" -o -name "*.a" \) | head -20
           
           echo ""
           echo "=== Full directory listing ==="
@@ -177,8 +170,8 @@ jobs:
             --android_ndk_path $ANDROID_NDK \
             --android_abi ${{ env.ANDROID_ABI }} \
             --use_acl \
-            --acl_home $GITHUB_WORKSPACE/acl-build \
-            --acl_libs $GITHUB_WORKSPACE/acl-build \
+            --acl_home $GITHUB_WORKSPACE/acl-build/ComputeLibrary \
+            --acl_libs $GITHUB_WORKSPACE/acl-build/ComputeLibrary/build \
             --build_shared_lib \
             --config Release \
             --update \
