@@ -75,6 +75,7 @@ jobs:
             neon=1 \
             opencl=0 \
             embed_kernels=1 \
+            shared=1 \
             os=android \
             arch=arm64-v8a \
             build_dir=build \
