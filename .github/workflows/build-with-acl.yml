@@ -163,13 +163,8 @@ jobs:
             --update \
             --build
 
-      - name: Collect .so files
-        run: |
-          mkdir -p artifacts
-          find . -name "libonnxruntime.so" -type f -exec cp {} artifacts/ \;
-          find . -name "libonnxruntime_c.so" -type f -exec cp {} artifacts/ \;
-          find . -name "libonnxruntime_providers_acl.so" -type f -exec cp {} artifacts/ \;
-          ls -lah artifacts/
+      - name: Collect Build Artifacts
+        run: cp -r build artifacts
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
