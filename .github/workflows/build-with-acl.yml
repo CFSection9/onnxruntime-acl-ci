@@ -94,9 +94,13 @@ jobs:
       - name: Get latest ONNX Runtime version
         id: get-ort-version
         run: |
-          ORT_VERSION=$(git describe --tags --abbrev=0 | sed 's/^v//')
+          # Get latest stable release tag (format: v*.*.*)
+          ORT_VERSION=$(git tag --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1 | sed 's/^v//')
           echo "version=${ORT_VERSION}" >> $GITHUB_OUTPUT
           echo "Building ONNX Runtime version: ${ORT_VERSION}"
+          
+          # Checkout the specific release tag
+          git checkout v${ORT_VERSION}
 
       - name: Setup Java
         uses: actions/setup-java@v4
