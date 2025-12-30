@@ -51,6 +51,12 @@ jobs:
           echo "Cloning ACL version: v${ACL_VERSION}"
           git clone --depth 1 --branch v${ACL_VERSION} https://github.com/ARM-software/ComputeLibrary.git
 
+      - name: Install SCons
+        if: steps.cache-acl.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y scons
+
       - name: Build ACL for Android
         if: steps.cache-acl.outputs.cache-hit != 'true'
         run: |
