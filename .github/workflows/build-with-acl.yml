@@ -39,9 +39,7 @@ jobs:
         id: cache-acl
         uses: actions/cache@v3
         with:
-          path: |
-            acl-build
-            ComputeLibrary
+          path: acl-build
           key: acl-android-${{ env.ANDROID_ABI }}-${{ steps.get-acl-version.outputs.version }}
 
       - name: Clone ARM Compute Library
