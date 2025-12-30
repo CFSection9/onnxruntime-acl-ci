@@ -61,16 +61,14 @@ jobs:
           PREBUILT_URL="https://github.com/ARM-software/ComputeLibrary/releases/download/v${ACL_VERSION}/${PREBUILT_TAR}"
           echo "Downloading prebuilt ACL from: ${PREBUILT_URL}"
           curl -L -o ${PREBUILT_TAR} ${PREBUILT_URL}
-          mkdir -p prebuilt
-          tar -xzf ${PREBUILT_TAR} -C prebuilt
+          mkdir -p ../acl-build/ComputeLibrary/build
+          tar -xzf ${PREBUILT_TAR} -C ../acl-build/ComputeLibrary/build
           
           # Copy full source tree (excluding .git) so ORT can see src/* headers it expects
           mkdir -p ../acl-build/ComputeLibrary
           tar cf - --exclude='.git' . | (cd ../acl-build/ComputeLibrary && tar xf -)
           
-          # Place prebuilt libs where ORT will link them
-          mkdir -p ../acl-build/ComputeLibrary/build
-          find prebuilt -type f \( -name "libarm_compute*.a" -o -name "libarm_compute*.so" \) -exec cp {} ../acl-build/ComputeLibrary/build/ \;
+          # Prebuilt contents already extracted into build/; ensure expected libs are present
           
           echo "Prebuilt artifacts and headers staged under ../acl-build/ComputeLibrary"
           ls -lah ../acl-build/ComputeLibrary
