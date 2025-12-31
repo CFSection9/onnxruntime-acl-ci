@@ -147,7 +147,11 @@ jobs:
       - name: Build ONNX Runtime with ACL
         run: |
           cd $GITHUB_WORKSPACE
-          
+
+          # Find the actual ACL lib directory
+          ACL_LIB_PATH=$(find acl-build/ComputeLibrary/build -type d -name "armv8a-neon*" | head -1)
+          echo "Found ACL lib at: ${ACL_LIB_PATH}"
+
           # Build ONNX Runtime for Android with ACL
           python3 tools/ci_build/build.py \
             --build_dir build \
@@ -157,7 +161,7 @@ jobs:
             --android_abi ${{ env.ANDROID_ABI }} \
             --use_acl \
             --acl_home $GITHUB_WORKSPACE/acl-build/ComputeLibrary \
-            --acl_libs $GITHUB_WORKSPACE/acl-build/ComputeLibrary/build \
+            --acl_libs ${ACL_LIB_PATH} \
             --build_shared_lib \
             --config Release \
             --update \
