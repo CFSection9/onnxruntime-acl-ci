@@ -148,9 +148,10 @@ jobs:
         run: |
           cd $GITHUB_WORKSPACE
 
-          # Find the actual ACL lib directory
-          ACL_LIB_PATH=$(find acl-build/ComputeLibrary/build -type d -name "armv8a-neon*" | head -1)
+          # Find the directory containing libarm_compute.so and convert to absolute path
+          ACL_LIB_PATH=$(find $GITHUB_WORKSPACE/acl-build/ComputeLibrary/build -name "libarm_compute.so" -type f | head -1 | xargs dirname)
           echo "Found ACL lib at: ${ACL_LIB_PATH}"
+          ls -lah ${ACL_LIB_PATH}/
 
           # Build ONNX Runtime for Android with ACL
           python3 tools/ci_build/build.py \
