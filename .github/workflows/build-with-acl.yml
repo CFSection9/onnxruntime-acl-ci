@@ -169,7 +169,35 @@ jobs:
             --build
 
       - name: Collect Build Artifacts
-        run: cp -r build artifacts
+        run: |
+          # Create organized artifact structure
+          mkdir -p artifacts/{lib,include/onnxruntime,cmake}
+          
+          # Copy .so libraries
+          echo "=== Collecting .so files ==="
+          find build/Release -maxdepth 1 -name "libonnxruntime*.so" -type f -exec cp {} artifacts/lib/ \;
+          ls -lah artifacts/lib/
+          
+          # Copy headers
+          echo ""
+          echo "=== Collecting headers ==="
+          if [ -d "build/Release/onnxruntime_config.h" ]; then
+            cp build/Release/onnxruntime_config.h artifacts/include/onnxruntime/
+          fi
+          find build -path "*include/onnxruntime*" -name "*.h" -type f -exec cp {} artifacts/include/onnxruntime/ \; 2>/dev/null || true
+          find build -path "*include/onnxruntime*" -name "*.hpp" -type f -exec cp {} artifacts/include/onnxruntime/ \; 2>/dev/null || true
+          ls -lah artifacts/include/onnxruntime/ | head -20
+          
+          # Copy CMake files
+          echo ""
+          echo "=== Collecting CMake files ==="
+          find build -name "onnxruntimeTargets*.cmake" -type f -exec cp {} artifacts/cmake/ \;
+          cp build/Release/CMakeCache.txt artifacts/cmake/ 2>/dev/null || true
+          ls -lah artifacts/cmake/
+          
+          echo ""
+          echo "=== Final artifacts structure ==="
+          find artifacts -type f | head -30
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
@@ -182,7 +210,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
         with:
-          files: artifacts/*.so
+          files: artifacts/lib/*.so
           draft: false
           prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
           body: |
@@ -211,11 +239,17 @@ jobs:
 
       - name: Verify .so files
         run: |
-          echo "=== Downloaded .so files ==="
-          ls -lah *.so
+          echo "=== Artifact Structure ==="
+          find . -type f | sort
+          
           echo ""
-          echo "=== File Information ==="
-          file *.so
+          echo "=== .so Library Files ==="
+          ls -lah lib/*.so 2>/dev/null || echo "No .so files found"
+          
           echo ""
-          echo "=== Checking symbols ==="
-          nm *.so | head -20 || echo "nm not available"
+          echo "=== Headers ==="
+          ls -lah include/onnxruntime/*.h 2>/dev/null | head -10 || echo "No headers found"
+          
+          echo ""
+          echo "=== CMake Files ==="
+          ls -lah cmake/ 2>/dev/null || echo "No cmake files found"
